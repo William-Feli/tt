@@ -1,0 +1,61 @@
+name: CI/CD Pipeline
+
+# O pipeline será acionado por push ou pull request na branch main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Definindo o job de build e testes
+  build_and_test:
+    runs-on: ubuntu-latest  # Sistema operacional que irá rodar o job
+
+    steps:
+      # Etapa 1: Checkout do código
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Etapa 2: Configurar Node.js (caso esteja usando Node.js)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Etapa 3: Instalar dependências (caso use npm ou yarn)
+      - name: Install dependencies
+        run: npm install
+
+      # Etapa 4: Rodar os testes unitários
+      - name: Run unit tests
+        run: npm test
+
+      # Etapa 5: Rodar os testes de integração (caso tenha scripts específicos)
+      - name: Run integration tests
+        run: npm run test:integration
+
+      # Etapa 6: Construir a aplicação (caso tenha uma build, ex.: React, Angular)
+      - name: Build application
+        run: npm run build
+
+  # Job de deploy
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_test  # Garantir que o deploy só ocorre após o build e testes passarem
+
+    steps:
+      # Etapa 1: Checkout do código
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Etapa 2: Configurar o deploy (exemplo com SSH)
+      - name: Deploy to production
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}  # Chave privada de deploy armazenada como Secret no GitHub
+        run: |
+          echo "$DEPLOY_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -i private_key.pem user@your-server 'cd /path/to/your/app && git pull && npm install && pm2 restart app'
